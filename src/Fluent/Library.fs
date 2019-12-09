@@ -21,43 +21,22 @@ module ValidationsMod=
         member __.__ = ()
         member __.``👌`` = ()
 module Person=
-    
-    type Name = { unName : String } 
-    with static member create s={unName=s}
-    type Email = { unEmail : String } 
-    with static member create s={unEmail=s}
-    type Age = { unAge : int }
-    with static member create i={unAge=i}
 
-    type Person = { name : Name
-                    email : Email
-                    age : Age }
+    type Person = { name : String
+                    email : String
+                    age : int }
     with static member create name email age={name=name;email=email;age=age }
 
-    type NameValidator()=
-        inherit AbstractValidator<Name>()
+    type PersonValidator()=
+        inherit AbstractValidator<Person>()
         do
-            base.RuleFor(fun n -> n.unName).MinimumLength(1).MaximumLength(50).WithErrorCode("NameBetween1And50").``👌``
-    type EmailValidator()=
-        inherit AbstractValidator<Email>()
-        do
-            base.RuleFor(fun n -> n.unEmail).EmailAddress().WithErrorCode("EmailMustContainAtChar").__
-    type AgeValidator()=
-        inherit AbstractValidator<Age>()
-        do
-            base.RuleFor(fun n -> n.unAge).InclusiveBetween(0,120).WithErrorCode("AgeBetween0and120").__
-    // Smart constructors
-    let mkName s = NameValidator() |> Validations.apply (Name.create s)
-
-    let mkEmail s = EmailValidator() |> Validations.apply (Email.create s)
-
-    let mkAge a = AgeValidator() |> Validations.apply (Age.create a) 
-        
+            base.RuleFor(fun n -> n.name).MinimumLength(1).MaximumLength(50).WithErrorCode("NameBetween1And50").``👌``
+            base.RuleFor(fun n -> n.email).EmailAddress().WithErrorCode("EmailMustContainAtChar").__
+            base.RuleFor(fun n -> n.age).InclusiveBetween(0,120).WithErrorCode("AgeBetween0and120").__
+    // Smart constructor
     let mkPerson pName pEmail pAge =
-        Person.create
-        <!> mkName pName
-        <*> mkEmail pEmail
-        <*> mkAge pAge
+        let p=Person.create pName pEmail pAge
+        PersonValidator() |> Validations.apply p
 
     // Examples
 

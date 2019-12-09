@@ -18,32 +18,15 @@ module Validations=
         | false -> Failure (err |> List.ofSeq)
 
 module Person=
-    
-    type Name = { [<MinLength(1,ErrorMessage ="NameBetween1And50"); MaxLength(50,ErrorMessage ="NameBetween1And50")>]unName : string } 
-    with static member create s={unName=s}
-    type Email = { [<EmailAddress(ErrorMessage ="EmailMustContainAtChar")>]unEmail : string } 
-    with static member create s={unEmail=s}
-    type Age = { [<Range(0,120,ErrorMessage = "AgeBetween0and120")>]unAge : int }
-    with static member create i={unAge=i}
-
-    type Person = { name : Name
-                    email : Email
-                    age : Age }
+    type Person = { [<MinLength(1,ErrorMessage ="NameBetween1And50"); MaxLength(50,ErrorMessage ="NameBetween1And50")>]name : string
+                    [<EmailAddress(ErrorMessage ="EmailMustContainAtChar")>]email : string
+                    [<Range(0,120,ErrorMessage = "AgeBetween0and120")>]age : int }
     with static member create name email age={name=name;email=email;age=age }
 
-
-
     // Smart constructors
-    let mkName s = Name.create s |> Validations.apply
-
-    let mkEmail s =  Email.create s |> Validations.apply
-
-    let mkAge a = Age.create a |> Validations.apply
     let mkPerson pName pEmail pAge =
-        Person.create
-        <!> mkName pName
-        <*> mkEmail pEmail
-        <*> mkAge pAge
+        let p=Person.create pName pEmail pAge
+        Validations.apply p
 
     // Examples
 

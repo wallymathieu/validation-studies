@@ -7,56 +7,35 @@ namespace AccidentalFish
 open System
 open FSharpPlus
 open FSharpPlus.Data
+open AccidentalFish.FSharp.Validation
 
-module Validations=
-    let apply (v:'T) (validator:#IValidator<'T>) =
-        let res = validator.Validate(box v)
-        match res.IsValid with
-        | true -> Success v
-        | false -> Failure (res.Errors |> List.ofSeq)
-[<AutoOpen>]
-module ValidationsMod=        
-    type IRuleBuilder<'T,'Property> with
-        member __.__ = ()
-        member __.``👌`` = ()
 module Person=
-    
-    type Name = { unName : String } 
-    with static member create s={unName=s}
-    type Email = { unEmail : String } 
-    with static member create s={unEmail=s}
-    type Age = { unAge : int }
-    with static member create i={unAge=i}
-
-    type Person = { name : Name
-                    email : Email
-                    age : Age }
+    type Person = { name : string
+                    email : string
+                    age : int }
     with static member create name email age={name=name;email=email;age=age }
-
-    type NameValidator()=
-        inherit AbstractValidator<Name>()
-        do
-            base.RuleFor(fun n -> n.unName).MinimumLength(1).MaximumLength(50).WithErrorCode("NameBetween1And50").``👌``
-    type EmailValidator()=
-        inherit AbstractValidator<Email>()
-        do
-            base.RuleFor(fun n -> n.unEmail).EmailAddress().WithErrorCode("EmailMustContainAtChar").__
-    type AgeValidator()=
-        inherit AbstractValidator<Age>()
-        do
-            base.RuleFor(fun n -> n.unAge).InclusiveBetween(0,120).WithErrorCode("AgeBetween0and120").__
+    let containsAt (s:string)= s.Contains("@")
+    let validatePerson = createValidatorFor<Person>() {
+        validate (fun r -> r.age) [
+            isGreaterThanOrEqualTo 0
+            isLessThanOrEqualTo 120
+        ] //AgeBetween0and120
+        validate (fun r -> r.name) [
+            isNotEmpty
+            hasMaxLengthOf 128
+            hasMinLengthOf 1
+        ] //NameBetween1And50
+        validate (fun r -> r.email) [
+            (fun p v -> if (containsAt v) then Ok else Errors([{ message="EmailMustContainAtChar"; errorCode="EmailMustContainAtChar"; property=p }]))
+        ]
+    }
     // Smart constructors
-    let mkName s = NameValidator() |> Validations.apply (Name.create s)
-
-    let mkEmail s = EmailValidator() |> Validations.apply (Email.create s)
-
-    let mkAge a = AgeValidator() |> Validations.apply (Age.create a) 
-        
     let mkPerson pName pEmail pAge =
-        Person.create
-        <!> mkName pName
-        <*> mkEmail pEmail
-        <*> mkAge pAge
+        let p = Person.create pName pEmail pAge
+        let res = validatePerson p
+        match res with
+        | Ok -> Success p
+        | Errors f -> Failure f
 
     // Examples
 
