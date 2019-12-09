@@ -25,7 +25,6 @@ module Person=
     type Person = { name : String
                     email : String
                     age : int }
-    with static member create name email age={name=name;email=email;age=age }
 
     type PersonValidator()=
         inherit AbstractValidator<Person>()
@@ -35,7 +34,7 @@ module Person=
             base.RuleFor(fun n -> n.age).InclusiveBetween(0,120).WithErrorCode("AgeBetween0and120").__
     // Smart constructor
     let mkPerson pName pEmail pAge =
-        let p=Person.create pName pEmail pAge
+        let p={name=pName;email=pEmail;age=pAge }
         PersonValidator() |> Validations.apply p
 
     // Examples

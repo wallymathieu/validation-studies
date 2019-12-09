@@ -31,9 +31,8 @@ module Person=
     }
     // Smart constructors
     let mkPerson pName pEmail pAge =
-        let p = Person.create pName pEmail pAge
-        let res = validatePerson p
-        match res with
+        let p = {name=pName;email=pEmail;age=pAge }
+        match validatePerson p with
         | Ok -> Success p
         | Errors f -> Failure f
 

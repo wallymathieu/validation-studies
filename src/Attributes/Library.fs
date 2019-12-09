@@ -21,11 +21,10 @@ module Person=
     type Person = { [<MinLength(1,ErrorMessage ="NameBetween1And50"); MaxLength(50,ErrorMessage ="NameBetween1And50")>]name : string
                     [<EmailAddress(ErrorMessage ="EmailMustContainAtChar")>]email : string
                     [<Range(0,120,ErrorMessage = "AgeBetween0and120")>]age : int }
-    with static member create name email age={name=name;email=email;age=age }
 
     // Smart constructors
     let mkPerson pName pEmail pAge =
-        let p=Person.create pName pEmail pAge
+        let p={name=pName;email=pEmail;age=pAge }
         Validations.apply p
 
     // Examples
