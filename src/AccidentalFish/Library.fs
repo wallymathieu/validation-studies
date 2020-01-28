@@ -15,6 +15,10 @@ module Person=
                     age : int }
     with static member create name email age={name=name;email=email;age=age }
     let containsAt (s:string)= s.Contains("@")
+    let validateEmail (property:string) (value:string)=
+        if (containsAt value) 
+        then Ok 
+        else Errors([{ message="EmailMustContainAtChar"; errorCode="EmailMustContainAtChar"; property=property }])
     let validatePerson = createValidatorFor<Person>() {
         validate (fun r -> r.age) [
             isGreaterThanOrEqualTo 0
@@ -25,9 +29,7 @@ module Person=
             hasMaxLengthOf 128
             hasMinLengthOf 1
         ] //NameBetween1And50
-        validate (fun r -> r.email) [
-            (fun p v -> if (containsAt v) then Ok else Errors([{ message="EmailMustContainAtChar"; errorCode="EmailMustContainAtChar"; property=p }]))
-        ]
+        validate (fun r -> r.email) [validateEmail]
     }
     // Smart constructors
     let mkPerson pName pEmail pAge =
