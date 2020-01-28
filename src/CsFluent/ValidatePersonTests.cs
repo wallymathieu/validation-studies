@@ -1,13 +1,13 @@
 ﻿using Xunit;
 
-namespace CsAttributes
+namespace CsFluent
 {
     public class ValidatePersonTests
     {
         [Fact]
         public void Given_validPerson()
         {
-            Assert.Empty(Validations.Validate(new Person { Name = "Bob", Age = 25, Email = "bob@gmail.com" }));
+            Assert.True(Validations.Validate(new Person { Name = "Bob", Age = 25, Email = "bob@gmail.com" }).IsValid);
         }
         [Fact]
         public void Given_badBooking()
