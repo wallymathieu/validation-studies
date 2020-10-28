@@ -19,6 +19,8 @@ jobs:
         dotnet-version: 3.1.301
     - name: Install tool dependencies
       run: dotnet tool restore
+    - name: Install paket dependencies
+      run: dotnet paket restore
     - name: Install project dependencies
       run: dotnet restore
     - name: Build
