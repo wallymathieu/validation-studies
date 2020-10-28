@@ -351,3 +351,6 @@ MigrationBackup/
 
 # Paket files
 .paket/
+
+# Rider:
+.idea
