@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using OneOf;
 
 namespace CsGenericValidations
 {
@@ -8,23 +9,18 @@ namespace CsGenericValidations
     {
         public string Description { get; private set; }
 
-        private class ValidationResult:ValidationResult<Booking, ReadOnlyCollection<DomainErrors>>
+        public static OneOf<Booking, DomainErrors> Create(string description)
         {
-        }
-
-        public static ValidationResult<Booking, ReadOnlyCollection<DomainErrors>> Create(string description)
-        {
-            var errors = new List<DomainErrors>();
+            var errors = DomainErrors.None;
             if (description is null || 1 > description.Length || description.Length > 50)
             {
-                errors.Add(DomainErrors.DescriptionBetween1And50);
+                errors|=DomainErrors.DescriptionBetween1And50;
             }
 
-            return errors.Any() 
-                ? ValidationResult
-                    .NewFailure(errors.AsReadOnly()) 
-                : ValidationResult
-                    .NewSuccess(new Booking { Description = description });
+            if (errors!=DomainErrors.None)
+                return errors;
+            else
+                return new Booking {Description = description};
         }
     }
 }

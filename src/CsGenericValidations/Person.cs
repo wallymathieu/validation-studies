@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using OneOf;
 
 namespace CsGenericValidations
 {
@@ -11,37 +12,35 @@ namespace CsGenericValidations
         public string Email { get; private set; }
         public int Age { get; private set;}
         public IEnumerable<Booking> Bookings { get; private set;}
-        private class ValidationResult:ValidationResult<Person, ReadOnlyCollection<DomainErrors>>
-        {
-        }
 
-        public static ValidationResult<Person, ReadOnlyCollection<DomainErrors>> Create(string name, string email, int age, IEnumerable<Booking> bookings)
+        public static OneOf<Person, DomainErrors> Create(string name, string email, int age, IEnumerable<Booking> bookings)
         {
-            var errors = new List<DomainErrors>();
+            var errors = DomainErrors.None;
             if (name is null || 1 > name.Length || name.Length > 50)
             {
-                errors.Add(DomainErrors.NameBetween1And50);
+                errors |= DomainErrors.NameBetween1And50;
             }
 
             if (email is null || !email.Contains("@"))
             {
-                errors.Add(DomainErrors.EmailMustContainAtChar);
+                errors|=DomainErrors.EmailMustContainAtChar;
             }
 
             if (0 > age || age > 120)
             {
-                errors.Add(DomainErrors.AgeBetween0and120);
+                errors|=DomainErrors.AgeBetween0and120;
             }
 
-            return errors.Any() 
-                ? ValidationResult
-                    .NewFailure(errors.AsReadOnly()) 
-                : ValidationResult
-                    .NewSuccess(new Person{
-                        Bookings= bookings,
-                        Name= name,
-                        Email= email,
-                        Age= age});
+            if (errors!=DomainErrors.None)
+                return errors;
+            else
+                return new Person
+                {
+                    Bookings = bookings,
+                    Name = name,
+                    Email = email,
+                    Age = age
+                };
         }
     }
 }
