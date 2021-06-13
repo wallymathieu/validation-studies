@@ -41,8 +41,19 @@ namespace CsGenericVisitors
         [Fact]
         public void Given_badEverything()
         {
-            Assert.Equal(DomainErrors.NameBetween1And50|DomainErrors.EmailMustContainAtChar|DomainErrors.AgeBetween0and120, 
-                Person.Create( name : "", age : 150, email : "bademail", bookings: Enumerable.Empty<Booking>() ));
+            var result=Person.Create( name : "", age : 150, email : "bademail", bookings: Enumerable.Empty<Booking>() );
+            Assert.Equal(DomainErrors.NameBetween1And50|DomainErrors.EmailMustContainAtChar|DomainErrors.AgeBetween0and120, result);
+        }
+
+        class OnValidPerson : IValidationResultVisitor<Person, DomainErrors>
+        {
+            public void Failure(DomainErrors failure)
+            {
+            }
+
+            public void Success(Person success)
+            {
+            }
         }
     }
 }

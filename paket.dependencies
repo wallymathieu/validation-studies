@@ -11,3 +11,7 @@ nuget xunit 2.4.0
 nuget xunit.runner.visualstudio 2.4.0
 nuget coverlet.collector 1.0.1
 nuget OneOf
+nuget Microsoft.AspNetCore.Mvc.Abstractions
+nuget Microsoft.AspNetCore.Mvc.Core
+nuget Microsoft.Extensions.DependencyInjection
+nuget Microsoft.Extensions.Logging

@@ -15,14 +15,8 @@ using System;
 
 namespace CsGenericVisitors
 {
-    public interface IValidationResultVisitor<in TSuccess, in TFailure>
-    {
-        T Success<T>(TSuccess success);
-        T Failure<T>(TFailure failure);
-    }
     public readonly struct ValidationResult<TSuccess,TFailure>
     {
-
         readonly TSuccess _value0;
         readonly TFailure _value1;
         readonly int _index;
@@ -99,14 +93,16 @@ namespace CsGenericVisitors
             }
         }
 
-        public T Accept<T>(IValidationResultVisitor<TSuccess, TFailure> visitor)
+        public void Accept(IValidationResultVisitor<TSuccess, TFailure> visitor)
         {
             switch (_index)
             {
                 case 0:
-                    return visitor.Success<T>(_value0);
+                    visitor.Success(_value0);
+                    return;
                 case 1:
-                    return visitor.Failure<T>(_value1);
+                    visitor.Failure(_value1);
+                    return;
                 default:
                     throw new InvalidOperationException();
             }
