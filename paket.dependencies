@@ -1,5 +1,5 @@
 source https://api.nuget.org/v3/index.json
-frameworks: netstandard2.0, netcoreapp3.1
+frameworks: netstandard2.0, net6
 generate_load_scripts: true
 nuget FSharp.Core
 nuget FluentValidation 8.6.0
