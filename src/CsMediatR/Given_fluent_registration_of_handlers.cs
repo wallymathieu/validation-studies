@@ -1,5 +1,7 @@
 using CsMediatR.App;
 using CsMediatR.Infrastructure.CommandHandlers;
+using FluentValidation;
+using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -9,6 +11,8 @@ namespace CsMediatR;
 public class Given_fluent_registration_of_handlers
 {
     private readonly ServiceProvider _serviceProvider;
+    private readonly IMediator _mediator;
+
     public Given_fluent_registration_of_handlers()
     {
         var conf = new ConfigurationBuilder().Build();
@@ -24,23 +28,20 @@ public class Given_fluent_registration_of_handlers
         var startup = new Startup();
         startup.ConfigureServices(services);
         _serviceProvider = services.BuildServiceProvider();
+        _mediator = _serviceProvider.GetRequiredService<IMediator>();
     }
+    
     [Fact]
-    public async Task Can_find_and_execute_create()
-    {
-        var handler = _serviceProvider.GetRequiredService<ICommandHandler<CreatePersonCommand,Person>>();
-        await handler.Handle(new CreatePersonCommand("Description"),default);
-    }
+    public void Can_find_create() => Assert.NotNull(_serviceProvider.GetRequiredService<IRequestHandler<CreatePersonCommand, Person>>());
+
     [Fact]
-    public void Can_find_update()
-    {
-        _serviceProvider.GetRequiredService<ICommandHandler<EditPersonCommand,Person>>();
-    }
+    public async Task Can_execute_create() => await _mediator.Send(new CreatePersonCommand("Description"),default);
+
     [Fact]
-    public async Task Validation_is_triggered()
-    {
-        var handler= _serviceProvider.GetRequiredService<ICommandHandler<EditPersonCommand,Person>>();
-        
-        await handler.Handle(new EditPersonCommand(null, 1),default);
-    }
+    public void Can_find_update_handler() => Assert.NotNull( _serviceProvider.GetRequiredService<IRequestHandler<EditPersonCommand,Person>>());
+
+    [Fact]
+    public async Task Validation_is_triggered() =>
+        await Assert.ThrowsAsync<ValidationException>(async ()=>
+            await _mediator.Send(new EditPersonCommand(null, 1), default));
 }
