@@ -5,3 +5,4 @@ xunit.runner.visualstudio
 Microsoft.Extensions.DependencyInjection.Abstractions
 MediatR.Extensions.Microsoft.DependencyInjection
 FluentValidation.AspNetCore
+FluentValidation.DependencyInjectionExtensions

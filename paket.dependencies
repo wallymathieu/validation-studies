@@ -1,7 +1,8 @@
 source https://api.nuget.org/v3/index.json
-frameworks: netstandard2.0, net6
+frameworks: netstandard2.0, net6, net5
 generate_load_scripts: true
 nuget FluentValidation.AspNetCore
+nuget FluentValidation.DependencyInjectionExtensions
 nuget FSharp.Core
 nuget FluentValidation 
 nuget FSharpPlus 1.2.0
