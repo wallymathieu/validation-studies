@@ -10,12 +10,12 @@ public class Person:IEntity
     public string Email { get; set; }
     public int Age { get; set; }
         
-    [CreateCommandHandler]
+    [CommandHandler]
     public static Person Create(CreatePersonCommand cmd, IServiceProvider services) =>
         new Person();
 
 
-    [MutateCommandHandler]
+    [CommandHandler]
     public Person Handle(EditPersonCommand cmd, IServiceProvider services) =>
         //....
         this;

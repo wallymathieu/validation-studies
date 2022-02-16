@@ -28,7 +28,7 @@ public static class ApiRegistrationsExtensions
         foreach (var (methodInfo, commandType, returnType) in
                  from method in t.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
                  let parameters = method.GetParameters()
-                 let attr = method.GetCustomAttribute<CreateCommandHandlerAttribute>()
+                 let attr = method.GetCustomAttribute<CommandHandlerAttribute>()
                  where attr != null
                        && method.ReturnType == t
                        && parameters.Length == 2
@@ -58,7 +58,7 @@ public static class ApiRegistrationsExtensions
         foreach (var (methodInfo, commandType, returnType) in
                  from method in t.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
                  let parameters = method.GetParameters()
-                 let attr = method.GetCustomAttribute<MutateCommandHandlerAttribute>()
+                 let attr = method.GetCustomAttribute<CommandHandlerAttribute>()
                  where attr != null
                        && parameters.Length == 2
                        && parameters[1].ParameterType == typeof(IServiceProvider)
