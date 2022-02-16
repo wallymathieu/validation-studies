@@ -3,9 +3,8 @@ using FluentValidation;
 
 namespace CsMediatR.App;
 
-public record EditPersonCommand(string Description, int Id):ICommand<Person>,IUpdateCommand
+public record EditPersonCommand(string Description, int Id):ICommand<Person>
 {
-    public object Identifier => Id;
 }
 public class EditPersonCommandValidator: AbstractValidator<EditPersonCommand>
 {

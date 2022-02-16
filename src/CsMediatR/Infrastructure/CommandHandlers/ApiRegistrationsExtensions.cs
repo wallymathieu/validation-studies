@@ -93,7 +93,7 @@ public static class ApiRegistrationsExtensions
         public TypedAggregateRegistrationBuilder(IServiceCollection services) => _services = services;
 
         public TypedAggregateRegistrationBuilder<T> UpdateCommandOnEntity<TCommand,TRet>(Func<T, TCommand, IServiceProvider, TRet> func)
-            where TCommand : ICommand<TRet>, IUpdateCommand
+            where TCommand : ICommand<TRet>
         {
             _services.AddScoped<IRequestHandler<TCommand,TRet>>(di => new FuncMutateCommandHandler<T, TCommand, TRet>(func, di));
             return this;
@@ -113,7 +113,7 @@ public static class ApiRegistrationsExtensions
     }
 
     class FuncMutateCommandHandler<T, TCommand,TRet> : IRequestHandler<TCommand,TRet>
-        where TCommand : ICommand<TRet>, IUpdateCommand where T : IEntity
+        where TCommand : ICommand<TRet> where T : IEntity
     {
         private readonly Func<T, TCommand, IServiceProvider, TRet> _func;
         private readonly IServiceProvider _serviceProvider;
@@ -124,10 +124,11 @@ public static class ApiRegistrationsExtensions
             _serviceProvider = serviceProvider;
         }
 
-        public async Task<TRet> Handle(TCommand cmd, CancellationToken cancellationToken=default)
+        public async Task<TRet> Handle(TCommand cmd, CancellationToken cancellationToken)
         {
             var repository = _serviceProvider.GetRequiredService<IRepository<T>>();
-            var entity = await repository.FindAsync(cmd.Identifier);
+            var keyValueFactory = _serviceProvider.GetRequiredService<IKeyValueFactory<TCommand>>();
+            var entity = await repository.FindAsync(keyValueFactory.Key(cmd));
 
             var r = _func(entity, cmd, _serviceProvider);
 
@@ -148,7 +149,7 @@ public static class ApiRegistrationsExtensions
             _serviceProvider = serviceProvider;
         }
 
-        public async Task<TRet> Handle(TCommand cmd, CancellationToken cancellationToken = default)
+        public async Task<TRet> Handle(TCommand cmd, CancellationToken cancellationToken)
         {
             var repository = _serviceProvider.GetRequiredService<IRepository<T>>();
             var (entity, ret) = _func(cmd, _serviceProvider);
@@ -169,7 +170,7 @@ public static class ApiRegistrationsExtensions
             _serviceProvider = serviceProvider;
         }
 
-        public async Task<T> Handle(TCommand cmd, CancellationToken cancellationToken=default)
+        public async Task<T> Handle(TCommand cmd, CancellationToken cancellationToken)
         {
             var repository = _serviceProvider.GetRequiredService<IRepository<T>>();
             var entity= _func(cmd, _serviceProvider);

@@ -20,7 +20,6 @@ public class Person:IEntity
         //....
         this;
 
-    object IEntity.Identifier => Id;
     public int Id { get; set; }
 }
 public class PersonValidator : AbstractValidator<Person>

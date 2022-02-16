@@ -11,9 +11,11 @@ public class Startup
         where T:IEntity
     {
         private IDictionary<object, T> entities = new Dictionary<object, T>();
+        private IKeyValueFactory<T> keyValueFactory;
+        public InMemoryRepository(IKeyValueFactory<T> keyValueFactory)=>this.keyValueFactory=keyValueFactory;
         public Task AddAsync(T entity)
         {
-            entities.Add(entity.Identifier,entity);
+            entities.Add(keyValueFactory.Key(entity),entity);
             return Task.CompletedTask;
         }
 
@@ -28,6 +30,7 @@ public class Startup
         services.AddMediatR(applicationAssembly);
         services.AddTransient<IRepository<Person>, InMemoryRepository<Person>>();
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+        services.AddSingleton(typeof(IKeyValueFactory<>), typeof(KeyValueFactory<>));
         services.AddValidatorsFromAssembly(applicationAssembly);
     }
 }
