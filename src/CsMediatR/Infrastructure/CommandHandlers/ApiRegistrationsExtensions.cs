@@ -22,7 +22,8 @@ public static class ApiRegistrationsExtensions
         RegisterUpdateCommandHandlers(services, t);
         return services;
     }
-
+    private static bool IsCommandType(Type t) =>t.IsClosedTypeOf(typeof(ICommand<>));
+    private static Type CommandTypeFromParameters(ParameterInfo[] parameters)=>parameters.FirstOrDefault(p=> IsCommandType(p.ParameterType));
     private static void RegisterCreateCommandHandlers(IServiceCollection services, Type t)
     {
         foreach (var (methodInfo, commandType, returnType) in
@@ -31,10 +32,9 @@ public static class ApiRegistrationsExtensions
                  let attr = method.GetCustomAttribute<CommandHandlerAttribute>()
                  where attr != null
                        && method.ReturnType == t
-                       && parameters.Length == 2
-                       && parameters[1].ParameterType == typeof(IServiceProvider)
+                       && parameters.Length >= 1
                  // has the correct signature
-                 select (method, parameters[0].ParameterType, method.ReturnType))
+                 select (method, CommandTypeFromParameters(parameters), method.ReturnType))
         {
             var regType = typeof(IRequestHandler<,>).MakeGenericType(commandType,returnType);
             var implType = typeof(FuncCreateCommandHandler<,>).MakeGenericType(t, commandType);
