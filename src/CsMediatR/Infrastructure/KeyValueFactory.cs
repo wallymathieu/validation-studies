@@ -28,7 +28,3 @@ public class KeyValueFactory<T>: IKeyValueFactory<T>
   }
   public object? Key(T obj) => _property.GetValue(obj);
 }
-public interface IKeyValueFactory<T>
-{
-  object? Key(T obj);
-}
