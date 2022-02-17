@@ -14,9 +14,10 @@ public class Booking : IEntity
 
 
     [CommandHandler]
-    public Booking Handle(EditBookingCommand cmd, IAService services) =>
+    public void Handle(EditBookingCommand cmd, IAService services)
+    {
         //....
-        this;
+    }
 
 }
 public class BookingValidator : AbstractValidator<Booking>

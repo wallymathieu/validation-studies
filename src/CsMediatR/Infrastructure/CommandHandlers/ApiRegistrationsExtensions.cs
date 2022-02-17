@@ -164,11 +164,11 @@ public static partial class ApiRegistrationsExtensions
             var parameters = method.GetParameters();
             var restParameters = parameters.Skip(1).ToArray();
             if (parameters.Length >= 1
-                                   && !restParameters.Any(p => p.ParameterType == typeof(IServiceProvider)))
+                && !restParameters.Any(p => p.ParameterType == typeof(IServiceProvider))) 
             {
                 var commandType = parameters[0].ParameterType;
                 var serviceParameters = restParameters.Select(p=>p.ParameterType).ToArray();
-                var returnType = method.ReturnType;
+                var returnType = method.ReturnType == typeof(void) ? typeof(MediatR.Unit) : method.ReturnType ;
                 var handlerTCommand = typeof(IRequestHandler<,>).MakeGenericType(commandType, returnType);
                 Func<IServiceProvider, object> lambda = FuncMutateServices(t, method, commandType, serviceParameters, returnType);
                 services.AddScoped(handlerTCommand, svc => lambda(svc));
@@ -219,7 +219,7 @@ public static partial class ApiRegistrationsExtensions
             if (parameters.Length == 2 && parameters[1].ParameterType == typeof(IServiceProvider))
             {
                 var commandType = parameters[0].ParameterType;
-                var returnType = method.ReturnType;
+                var returnType = method.ReturnType == typeof(void) ? typeof(MediatR.Unit) : method.ReturnType ;
                 var handlerTCommand = typeof(IRequestHandler<,>).MakeGenericType(commandType, returnType);
                 Func<IServiceProvider, object> lambda = FuncMutateOnlyServiceProvider(t, method, commandType, returnType);
                 services.AddScoped(handlerTCommand, svc => lambda(svc));

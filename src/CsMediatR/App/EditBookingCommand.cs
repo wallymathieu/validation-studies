@@ -3,7 +3,7 @@ using FluentValidation;
 
 namespace CsMediatR.App;
 
-public record EditBookingCommand(string Description, int Id):ICommand<Booking>
+public record EditBookingCommand(string Description, int Id):ICommand<MediatR.Unit>
 {
 }
 public class EditBookingCommandValidator: AbstractValidator<EditBookingCommand>
