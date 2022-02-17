@@ -11,7 +11,7 @@ open FSharpPlus.Data
 
 module Validations=
     let apply (v:'T) (validator:#IValidator<'T>) =
-        let res = validator.Validate(box v)
+        let res = validator.Validate(v)
         match res.IsValid with
         | true -> Success v
         | false -> Failure (res.Errors |> List.ofSeq)

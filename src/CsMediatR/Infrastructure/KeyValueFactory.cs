@@ -1,0 +1,30 @@
+using System;
+using System.Reflection;
+using System.ComponentModel.DataAnnotations;
+
+namespace CsMediatR.Infrastructure;
+
+public class KeyValueFactory<T>: IKeyValueFactory<T>
+{
+  PropertyInfo _property;
+  public KeyValueFactory()
+  {
+    var type = typeof(T);
+    var properties = type.GetProperties();
+    var property = properties.FirstOrDefault(p =>
+      p.CustomAttributes?.Any(attr => attr.AttributeType == typeof(KeyAttribute))??false);
+    if (property is null)
+    {
+      property = type.GetProperties().FirstOrDefault(p =>
+                  p.Name!=null
+                  && ( p.Name.Equals("ID", StringComparison.OrdinalIgnoreCase)
+                  || p.Name.Equals(type.Name + "ID", StringComparison.OrdinalIgnoreCase)));
+    }
+    if (property is null)
+    {
+      throw new Exception("No key found for type") { Data = { { "Type", typeof(T) } } };
+    }
+    _property = property;
+  }
+  public object? Key(T obj) => _property.GetValue(obj);
+}
