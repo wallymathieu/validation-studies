@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CsMediatR.Infrastructure.CommandHandlers;
 
-public static class ApiRegistrationsExtensions
+public static partial class ApiRegistrationsExtensions
 {
     public static TypedAggregateRegistrationBuilder<T> RegisterHandlersFor<T>(this IServiceCollection services) where T : IEntity
     {
@@ -18,54 +18,223 @@ public static class ApiRegistrationsExtensions
     }
     public static IServiceCollection RegisterAttributesForType(this IServiceCollection services, Type t)
     {
-        RegisterCreateCommandHandlers(services, t);
-        RegisterUpdateCommandHandlers(services, t);
+        foreach (var method in
+                 (from m in t.GetMethods(BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                  let attr = m.GetCustomAttribute<CommandHandlerAttribute>()
+                  where attr != null
+                  select m))
+        {
+
+            if (RegisterCreateCommandHandlers(services, t, method))
+            {
+                continue;
+            }
+            if (RegisterUpdateCommandHandlers(services, t, method))
+            {
+                continue;
+            }
+            throw new Exception("Could not interpret commandhandler for method"){ Data = { { "Method",method.Name } } };
+        }
+
         return services;
     }
 
-    private static void RegisterCreateCommandHandlers(IServiceCollection services, Type t)
+    private static bool RegisterCreateCommandHandlers(IServiceCollection services, Type t, MethodInfo method)
     {
-        foreach (var (methodInfo, commandType, returnType) in
-                 from method in t.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
-                 let parameters = method.GetParameters()
-                 let attr = method.GetCustomAttribute<CommandHandlerAttribute>()
-                 where attr != null
-                       && method.ReturnType == t
-                       && parameters.Length == 2
-                       && parameters[1].ParameterType == typeof(IServiceProvider)
-                 // has the correct signature
-                 select (method, parameters[0].ParameterType, method.ReturnType))
+        if (!method.IsStatic)
         {
-            var regType = typeof(IRequestHandler<,>).MakeGenericType(commandType,returnType);
+            return false;
+        }
+        if (RegisterOnlyServiceProviderCreateCommandHandler(services, t, method))
+        {
+            return true;
+        }
+        if (RegisterServiceCreateCommandHandler(services, t, method))
+        {
+            return true;
+        }
+        return false;
+
+        static bool RegisterOnlyServiceProviderCreateCommandHandler(IServiceCollection services, Type t, MethodInfo method)
+        {
+            var parameters = method.GetParameters();
+            if (method.ReturnType == t
+                           && parameters.Length == 2
+                           && parameters[1].ParameterType == typeof(IServiceProvider))
+            // select (method, parameters[0].ParameterType, method.ReturnType))
+            {
+                var returnType = method.ReturnType;
+                var commandType = parameters[0].ParameterType;
+                var regType = typeof(IRequestHandler<,>).MakeGenericType(commandType, returnType);
+                Func<IServiceProvider, object> lambda = FuncCreateOnlyServiceProvider(t, method, commandType);
+                services.AddScoped(regType, svc => lambda(svc));
+                return true;
+            }
+            return false;
+        }
+
+        /* 
+            services.AddScoped<IRequestHandler<TCommand>>(svc=>
+                new FuncCreateCommandHandler<T,TCommand>((entity, cmd, svc) =>
+                    `EntityType`.`MethodInfo`(cmd, svc), svc))
+        */
+        static Func<IServiceProvider, object> FuncCreateOnlyServiceProvider(Type t, MethodInfo methodInfo, Type commandType)
+        {
             var implType = typeof(FuncCreateCommandHandler<,>).MakeGenericType(t, commandType);
             //<TCommand, IServiceProvider, T>
             var funcType = typeof(Func<,,>).MakeGenericType(commandType, typeof(IServiceProvider), t);
-            var parameter = Expression.Parameter(typeof(IServiceProvider), "di");
+            var parameter_Svc = Expression.Parameter(typeof(IServiceProvider), "svc");
             // (cmd, svc) => `EntityType`.`MethodInfo`(cmd, svc)
             Func<IServiceProvider, object> lambda = Expression.Lambda<Func<IServiceProvider, object>>(
                 Expression.New( // new
                     implType.GetConstructors()[0], // FuncCreateCommandHandler<T,TCommand>
                     Expression.Constant(Delegate.CreateDelegate(funcType, methodInfo)), //
-                    parameter
+                    parameter_Svc
                 ),
-                parameter).Compile();
-            services.AddScoped(regType, svc => lambda(svc));
+                parameter_Svc).Compile();
+            return lambda;
         }
+        static bool RegisterServiceCreateCommandHandler(IServiceCollection services, Type t, MethodInfo method)
+        {
+            var parameters = method.GetParameters();
+            var restParameters = parameters.Skip(1).ToArray();
+            if (parameters.Length >= 1
+                                   && !restParameters.Any(p => p.ParameterType == typeof(IServiceProvider)))
+            {
+                var commandType = parameters[0].ParameterType;
+                var serviceParameters = restParameters.Select(p=>p.ParameterType).ToArray();
+                var returnType = method.ReturnType;
+                var regType = typeof(IRequestHandler<,>).MakeGenericType(commandType, returnType);
+                Func<IServiceProvider, object> lambda = FuncCreateService(t, method, commandType, serviceParameters);
+                services.AddScoped(regType, svc => lambda(svc));
+                return true;
+            }
+            return false;
+        }
+        /* 
+            services.AddScoped<IRequestHandler<TCommand>>(svc=>
+                new FuncCreateCommandHandler<T,TCommand>((entity, cmd, svc) =>
+                    `EntityType`.`MethodInfo`(cmd, svc.GetRequiredService<TService>() ..), svc))
+        */
+        static Func<IServiceProvider, object> FuncCreateService(Type t, MethodInfo methodInfo, Type commandType,Type[] serviceParameters)
+        {
+            var implType = typeof(FuncCreateCommandHandler<,>).MakeGenericType(t, commandType);
+            //<TCommand, IServiceProvider, T>
+            var funcType = typeof(Func<,,>).MakeGenericType(commandType, typeof(IServiceProvider), t);
+            var parameter_Svc = Expression.Parameter(typeof(IServiceProvider), "svc");
+            var parameter_Cmd = Expression.Parameter(commandType, "cmd");
+            var parameters = (
+                from p in serviceParameters
+                from m in typeof(ServiceProviderServiceExtensions).GetMethods()
+                where m.Name == nameof(ServiceProviderServiceExtensions.GetRequiredService) 
+                    //&& m.IsGenericMethod
+                    && m.IsGenericMethodDefinition
+                let getRequiredService = m.MakeGenericMethod(p)
+                select (Expression)Expression.Call(getRequiredService, parameter_Svc)
+            );
+            // (cmd, svc) => `EntityType`.`MethodInfo`(cmd, svc.GetRequiredService<TService>() ...)
+            Func<IServiceProvider, object> lambda = Expression.Lambda<Func<IServiceProvider, object>>(
+                Expression.New( // new
+                    implType.GetConstructors()[0], // FuncCreateCommandHandler<T,TCommand>
+                    Expression.Lambda( // (cmd, svc) =>
+                        Expression.Call(methodInfo, new Expression[]{ parameter_Cmd }.Union( parameters).ToArray()), 
+                        parameter_Cmd, parameter_Svc),
+                    parameter_Svc
+                ),
+                parameter_Svc).Compile();
+            return lambda;
+        }
+
     }
 
-    private static void RegisterUpdateCommandHandlers(IServiceCollection services, Type t)
+    private static bool RegisterUpdateCommandHandlers(IServiceCollection services, Type t, MethodInfo method)
     {
-        foreach (var (methodInfo, commandType, returnType) in
-                 from method in t.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                 let parameters = method.GetParameters()
-                 let attr = method.GetCustomAttribute<CommandHandlerAttribute>()
-                 where attr != null
-                       && parameters.Length == 2
-                       && parameters[1].ParameterType == typeof(IServiceProvider)
-                 // has the correct signature
-                 select (method, parameters[0].ParameterType, method.ReturnType))
+        if (RegisterFuncMutateServices(services, t, method))
         {
-            var handlerTCommand = typeof(IRequestHandler<,>).MakeGenericType(commandType,returnType);
+            return true;
+        }
+        if (RegisterFuncMutateOnlyServiceProvider(services, t, method))
+        {
+            return true;
+        }
+        return false;
+
+        static bool RegisterFuncMutateServices(IServiceCollection services, Type t, MethodInfo method)
+        {
+            var parameters = method.GetParameters();
+            var restParameters = parameters.Skip(1).ToArray();
+            if (parameters.Length >= 1
+                                   && !restParameters.Any(p => p.ParameterType == typeof(IServiceProvider)))
+            {
+                var commandType = parameters[0].ParameterType;
+                var serviceParameters = restParameters.Select(p=>p.ParameterType).ToArray();
+                var returnType = method.ReturnType;
+                var handlerTCommand = typeof(IRequestHandler<,>).MakeGenericType(commandType, returnType);
+                Func<IServiceProvider, object> lambda = FuncMutateServices(t, method, commandType, serviceParameters, returnType);
+                services.AddScoped(handlerTCommand, svc => lambda(svc));
+                return true;
+            }
+            return false ;
+        }
+        /*
+            services.AddScoped<IRequestHandler<TCommand>>(svc=>
+                new FuncMutateCommandHandler<T,TCommand>((entity, cmd, svc) => entity.`MethodInfo`(cmd, 
+                    svc.GetRequiredService<IService1>(),
+                    svc.GetRequiredService<IService2>()
+                    ), svc))
+        */
+        static Func<IServiceProvider, object> FuncMutateServices(Type t, MethodInfo methodInfo, Type commandType, Type[] serviceParameters, Type returnType)
+        {
+            var funcMutateCommandHandlerTT = typeof(FuncMutateCommandHandler<,,>).MakeGenericType(t, commandType, returnType);
+            var parameter_Entity = Expression.Parameter(t, "entity");
+            var parameter_Cmd = Expression.Parameter(commandType, "cmd");
+            var parameter_Svc = Expression.Parameter(typeof(IServiceProvider), "svc");
+
+            var parameters = (
+                from p in serviceParameters
+                from m in typeof(ServiceProviderServiceExtensions).GetMethods()
+                where m.Name == nameof(ServiceProviderServiceExtensions.GetRequiredService) 
+                    //&& m.IsGenericMethod
+                    && m.IsGenericMethodDefinition
+                let getRequiredService = m.MakeGenericMethod(p)
+                select (Expression)Expression.Call(getRequiredService, parameter_Svc)
+            );
+            // (entity, cmd, svc) => entity.`MethodInfo`(cmd, svc)
+            Func<IServiceProvider, object> lambda = Expression.Lambda<Func<IServiceProvider, object>>(
+                    Expression.New( // new  
+                        funcMutateCommandHandlerTT.GetConstructors()[0], // FuncMutateCommandHandler<T,TCommand,TRet>
+                    Expression.Lambda( // (entity, cmd, svc) =>
+                        Expression.Call(parameter_Entity, methodInfo, new Expression[]{ parameter_Cmd }.Union( parameters).ToArray()), // entity.`MethodInfo`(cmd, svc.GetRequiredService<T>() ... ) , i.e. entity.HandleTheCommand(cmd,svc)
+                        parameter_Entity, parameter_Cmd, parameter_Svc),
+                    parameter_Svc
+                ),
+                parameter_Svc)
+            .Compile();
+            return lambda;
+        }
+
+        static bool RegisterFuncMutateOnlyServiceProvider(IServiceCollection services, Type t, MethodInfo method)
+        {
+            var parameters = method.GetParameters();
+            if (parameters.Length == 2 && parameters[1].ParameterType == typeof(IServiceProvider))
+            {
+                var commandType = parameters[0].ParameterType;
+                var returnType = method.ReturnType;
+                var handlerTCommand = typeof(IRequestHandler<,>).MakeGenericType(commandType, returnType);
+                Func<IServiceProvider, object> lambda = FuncMutateOnlyServiceProvider(t, method, commandType, returnType);
+                services.AddScoped(handlerTCommand, svc => lambda(svc));
+                return true;
+            }
+            return false;
+        }
+
+        /*
+             services.AddScoped<IRequestHandler<TCommand>>(svc=>
+                new FuncMutateCommandHandler<T,TCommand>((entity, cmd, svc) => 
+                    entity.`MethodInfo`(cmd, svc), svc))
+        */
+        static Func<IServiceProvider, object> FuncMutateOnlyServiceProvider(Type t, MethodInfo methodInfo, Type commandType, Type returnType)
+        {
             var funcMutateCommandHandlerTT = typeof(FuncMutateCommandHandler<,,>).MakeGenericType(t, commandType, returnType);
             var parameter_Entity = Expression.Parameter(t, "entity");
             var parameter_Cmd = Expression.Parameter(commandType, "cmd");
@@ -74,108 +243,15 @@ public static class ApiRegistrationsExtensions
             Func<IServiceProvider, object> lambda = Expression.Lambda<Func<IServiceProvider, object>>(
                     Expression.New( // new  
                         funcMutateCommandHandlerTT.GetConstructors()[0], // FuncMutateCommandHandler<T,TCommand,TRet>
-                        Expression.Lambda( // (entity, cmd, svc) =>
-                            Expression.Call(parameter_Entity, methodInfo, parameter_Cmd, parameter_Svc), // entity.`MethodInfo`(cmd, svc) , i.e. entity.HandleTheCommand(cmd,svc)
-                            parameter_Entity, parameter_Cmd, parameter_Svc),
-                        parameter_Svc
-                    ),
-                    parameter_Svc)
-                .Compile();
-            // services.AddScoped<IRequestHandler<TCommand>>(svc=>new FuncMutateCommandHandler<T,TCommand>((entity, cmd, svc) => entity.`MethodInfo`(cmd, svc), svc))
-            services.AddScoped(handlerTCommand, svc => lambda(svc));
+                    Expression.Lambda( // (entity, cmd, svc) =>
+                        Expression.Call(parameter_Entity, methodInfo, parameter_Cmd, parameter_Svc), // entity.`MethodInfo`(cmd, svc) , i.e. entity.HandleTheCommand(cmd,svc)
+                        parameter_Entity, parameter_Cmd, parameter_Svc),
+                    parameter_Svc
+                ),
+                parameter_Svc)
+            .Compile();
+            return lambda;
         }
     }
 
-    public class TypedAggregateRegistrationBuilder<T> where T : IEntity
-    {
-        private readonly IServiceCollection _services;
-
-        public TypedAggregateRegistrationBuilder(IServiceCollection services) => _services = services;
-
-        public TypedAggregateRegistrationBuilder<T> UpdateCommandOnEntity<TCommand,TRet>(Func<T, TCommand, IServiceProvider, TRet> func)
-            where TCommand : ICommand<TRet>
-        {
-            _services.AddScoped<IRequestHandler<TCommand,TRet>>(di => new FuncMutateCommandHandler<T, TCommand, TRet>(func, di));
-            return this;
-        }
-        public TypedAggregateRegistrationBuilder<T> CreateCommandOnEntity<TCommand>(Func<TCommand, IServiceProvider, T> func) 
-            where TCommand : ICommand<T>
-        {
-            _services.AddScoped<IRequestHandler<TCommand,T>>(di => new FuncCreateCommandHandler<T, TCommand>(func, di));
-            return this;
-        }
-        public TypedAggregateRegistrationBuilder<T> CreateCommandOnEntity<TCommand,TRet>(Func<TCommand, IServiceProvider, (T,TRet)> func) 
-            where TCommand : ICommand<TRet>
-        {
-            _services.AddScoped<IRequestHandler<TCommand,TRet>>(di => new FuncCreateCommandHandler<T, TCommand,TRet>(func, di));
-            return this;
-        }
-    }
-
-    class FuncMutateCommandHandler<T, TCommand,TRet> : IRequestHandler<TCommand,TRet>
-        where TCommand : ICommand<TRet> where T : IEntity
-    {
-        private readonly Func<T, TCommand, IServiceProvider, TRet> _func;
-        private readonly IServiceProvider _serviceProvider;
-
-        public FuncMutateCommandHandler(Func<T, TCommand, IServiceProvider, TRet> func, IServiceProvider serviceProvider)
-        {
-            _func = func;
-            _serviceProvider = serviceProvider;
-        }
-
-        public async Task<TRet> Handle(TCommand cmd, CancellationToken cancellationToken)
-        {
-            var repository = _serviceProvider.GetRequiredService<IRepository<T>>();
-            var keyValueFactory = _serviceProvider.GetRequiredService<IKeyValueFactory<TCommand>>();
-            var entity = await repository.FindAsync(keyValueFactory.Key(cmd));
-
-            var r = _func(entity, cmd, _serviceProvider);
-
-            return r;
-        }
-    }
-
-    class FuncCreateCommandHandler<T, TCommand, TRet> : IRequestHandler<TCommand, TRet>
-        where TCommand : ICommand<TRet> where T : IEntity
-    {
-        private readonly Func<TCommand, IServiceProvider, (T, TRet)> _func;
-        private readonly IServiceProvider _serviceProvider;
-
-        public FuncCreateCommandHandler(Func<TCommand, IServiceProvider, (T, TRet)> func,
-            IServiceProvider serviceProvider)
-        {
-            _func = func;
-            _serviceProvider = serviceProvider;
-        }
-
-        public async Task<TRet> Handle(TCommand cmd, CancellationToken cancellationToken)
-        {
-            var repository = _serviceProvider.GetRequiredService<IRepository<T>>();
-            var (entity, ret) = _func(cmd, _serviceProvider);
-            await repository.AddAsync(entity);
-            return ret;
-        }
-    }
-
-    class FuncCreateCommandHandler<T, TCommand> : IRequestHandler<TCommand,T>
-        where TCommand : ICommand<T> where T : IEntity
-    {
-        private readonly Func<TCommand, IServiceProvider, T> _func;
-        private readonly IServiceProvider _serviceProvider;
-
-        public FuncCreateCommandHandler(Func<TCommand, IServiceProvider, T> func, IServiceProvider serviceProvider)
-        {
-            _func = func;
-            _serviceProvider = serviceProvider;
-        }
-
-        public async Task<T> Handle(TCommand cmd, CancellationToken cancellationToken)
-        {
-            var repository = _serviceProvider.GetRequiredService<IRepository<T>>();
-            var entity= _func(cmd, _serviceProvider);
-            await repository.AddAsync(entity);
-            return entity;
-        }
-    }
 }

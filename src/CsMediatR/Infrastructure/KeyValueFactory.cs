@@ -15,10 +15,15 @@ public class KeyValueFactory<T>: IKeyValueFactory<T>
       p.CustomAttributes?.Any(attr => attr.AttributeType == typeof(KeyAttribute))??false);
     if (property is null)
     {
-      property = type.GetProperties().FirstOrDefault(p =>
+      property = properties.FirstOrDefault(p =>
                   p.Name!=null
-                  && ( p.Name.Equals("ID", StringComparison.OrdinalIgnoreCase)
-                  || p.Name.Equals(type.Name + "ID", StringComparison.OrdinalIgnoreCase)));
+                  && p.Name.Equals("ID", StringComparison.OrdinalIgnoreCase));
+    }
+    if (property is null && typeof(IEntity).IsAssignableFrom(type))
+    {
+      property = properties.FirstOrDefault(p =>
+                  p.Name!=null
+                  && p.Name.Equals(type.Name + "ID", StringComparison.OrdinalIgnoreCase));
     }
     if (property is null)
     {

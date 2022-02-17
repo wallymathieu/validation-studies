@@ -28,9 +28,15 @@ public class Startup
     {
         var applicationAssembly = this.GetType().Assembly;
         services.AddMediatR(applicationAssembly);
+        services.AddTransient<IAService,AService>();
         services.AddTransient<IRepository<Person>, InMemoryRepository<Person>>();
+        services.AddTransient<IRepository<Booking>, InMemoryRepository<Booking>>();
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
         services.AddSingleton(typeof(IKeyValueFactory<>), typeof(KeyValueFactory<>));
         services.AddValidatorsFromAssembly(applicationAssembly);
+    }
+
+    private class AService:IAService
+    {
     }
 }
