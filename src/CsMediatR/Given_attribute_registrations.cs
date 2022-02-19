@@ -35,7 +35,7 @@ public class Given_attribute_registrations
     public void Given_service_in_method_Can_find_create() => Assert.NotNull(_serviceProvider.GetRequiredService<IRequestHandler<CreateBookingCommand, Booking>>());
 
     [Fact]
-    public async Task Given_service_provider_in_method_Can_execute_create() => await _mediator.Send(new CreatePersonCommand("Description"),default);
+    public async Task Given_service_provider_in_method_Can_execute_create() => await _mediator.Send(new CreatePersonCommand(Name: "Bob", Age: 25, Email: "bob@gmail.com"),default);
     [Fact]
     public async Task Given_service_in_method_Can_execute_create() => await _mediator.Send(new CreateBookingCommand("Description"),default);
 

@@ -1,3 +1,4 @@
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -21,7 +22,9 @@ public static partial class ApiRegistrationsExtensions
         public async Task<TRet> Handle(TCommand cmd, CancellationToken cancellationToken)
         {
             var repository = _serviceProvider.GetRequiredService<IRepository<T>>();
+            var validator= _serviceProvider.GetRequiredService<IValidator<T>>();
             var (entity, ret) = _func(cmd, _serviceProvider);
+            await validator.ValidateAndThrowAsync(entity);
             await repository.AddAsync(entity);
             return ret;
         }
@@ -42,7 +45,9 @@ public static partial class ApiRegistrationsExtensions
         public async Task<T> Handle(TCommand cmd, CancellationToken cancellationToken)
         {
             var repository = _serviceProvider.GetRequiredService<IRepository<T>>();
+            var validator= _serviceProvider.GetRequiredService<IValidator<T>>();
             var entity = _func(cmd, _serviceProvider);
+            await validator.ValidateAndThrowAsync(entity);
             await repository.AddAsync(entity);
             return entity;
         }

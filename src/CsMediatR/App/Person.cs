@@ -12,7 +12,7 @@ public class Person:IEntity
         
     [CommandHandler]
     public static Person Create(CreatePersonCommand cmd, IServiceProvider services) =>
-        new Person();
+        new Person{ Name=cmd.Name,Email=cmd.Email,Age=cmd.Age };
 
 
     [CommandHandler]
@@ -27,9 +27,12 @@ public class PersonValidator : AbstractValidator<Person>
     public PersonValidator()
     {
         RuleFor(n => n.Name)
+            .NotNull().WithErrorCode("NameMustNotBeNull")
             .MinimumLength(1).WithErrorCode("NameBetween1And50")
             .MaximumLength(50).WithErrorCode("NameBetween1And50");
-        RuleFor(n => n.Email).EmailAddress().WithErrorCode("EmailMustContainAtChar");
+        RuleFor(n => n.Email)
+            .NotNull().WithErrorCode("EmailMustNotBeNull")
+            .EmailAddress().WithErrorCode("EmailMustContainAtChar");
         RuleFor(n => n.Age).InclusiveBetween(0, 120).WithErrorCode("AgeBetween0and120");
     }
 }

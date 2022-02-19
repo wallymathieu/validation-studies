@@ -1,3 +1,4 @@
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -21,9 +22,11 @@ public static partial class ApiRegistrationsExtensions
         {
             var repository = _serviceProvider.GetRequiredService<IRepository<T>>();
             var keyValueFactory = _serviceProvider.GetRequiredService<IKeyValueFactory<TCommand>>();
+            var validator= _serviceProvider.GetRequiredService<IValidator<T>>();
             var entity = await repository.FindAsync(keyValueFactory.Key(cmd));
 
             var r = _func(entity, cmd, _serviceProvider);
+            await validator.ValidateAndThrowAsync(entity);
 
             return r;
         }
@@ -44,10 +47,11 @@ public static partial class ApiRegistrationsExtensions
         {
             var repository = _serviceProvider.GetRequiredService<IRepository<T>>();
             var keyValueFactory = _serviceProvider.GetRequiredService<IKeyValueFactory<TCommand>>();
+            var validator= _serviceProvider.GetRequiredService<IValidator<T>>();
             var entity = await repository.FindAsync(keyValueFactory.Key(cmd));
 
             _func(entity, cmd, _serviceProvider);
-
+            await validator.ValidateAndThrowAsync(entity);
             return Unit.Value; 
         }
     }

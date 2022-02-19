@@ -10,7 +10,7 @@ public class Booking : IEntity
     public string Description { get; set; }
     [CommandHandler]
     public static Booking Create(CreateBookingCommand cmd, IAService services) =>
-        new Booking();
+        new Booking{ Description=cmd.Description };
 
 
     [CommandHandler]
@@ -25,6 +25,7 @@ public class BookingValidator : AbstractValidator<Booking>
     public BookingValidator()
     {
         RuleFor(n => n.Description)
+            .NotNull().WithErrorCode("DescriptionMustNotBeNull")
             .MinimumLength(1).WithErrorCode("DescriptionBetween1And50")
             .MaximumLength(50).WithErrorCode("DescriptionBetween1And50");
     }
