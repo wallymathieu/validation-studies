@@ -185,7 +185,9 @@ public static partial class ApiRegistrationsExtensions
         */
         static Func<IServiceProvider, object> FuncMutateServices(Type t, MethodInfo methodInfo, Type commandType, Type[] serviceParameters, Type returnType)
         {
-            var funcMutateCommandHandlerTT = typeof(FuncMutateCommandHandler<,,>).MakeGenericType(t, commandType, returnType);
+            var funcMutateCommandHandlerTT = returnType == typeof(MediatR.Unit)
+                ? typeof(FuncMutateCommandHandler<,>).MakeGenericType(t, commandType)
+                : typeof(FuncMutateCommandHandler<,,>).MakeGenericType(t, commandType, returnType);
             var parameter_Entity = Expression.Parameter(t, "entity");
             var parameter_Cmd = Expression.Parameter(commandType, "cmd");
             var parameter_Svc = Expression.Parameter(typeof(IServiceProvider), "svc");
@@ -235,7 +237,9 @@ public static partial class ApiRegistrationsExtensions
         */
         static Func<IServiceProvider, object> FuncMutateOnlyServiceProvider(Type t, MethodInfo methodInfo, Type commandType, Type returnType)
         {
-            var funcMutateCommandHandlerTT = typeof(FuncMutateCommandHandler<,,>).MakeGenericType(t, commandType, returnType);
+            var funcMutateCommandHandlerTT = returnType == typeof(MediatR.Unit)
+                ? typeof(FuncMutateCommandHandler<,>).MakeGenericType(t, commandType)
+                : typeof(FuncMutateCommandHandler<,,>).MakeGenericType(t, commandType, returnType);
             var parameter_Entity = Expression.Parameter(t, "entity");
             var parameter_Cmd = Expression.Parameter(commandType, "cmd");
             var parameter_Svc = Expression.Parameter(typeof(IServiceProvider), "svc");

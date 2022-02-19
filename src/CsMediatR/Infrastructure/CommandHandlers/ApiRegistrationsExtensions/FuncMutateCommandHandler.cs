@@ -28,5 +28,27 @@ public static partial class ApiRegistrationsExtensions
             return r;
         }
     }
+    class FuncMutateCommandHandler<T, TCommand> : IRequestHandler<TCommand, MediatR.Unit>
+        where TCommand : ICommand<MediatR.Unit> where T : IEntity
+    {
+        private readonly Action<T, TCommand, IServiceProvider> _func;
+        private readonly IServiceProvider _serviceProvider;
 
+        public FuncMutateCommandHandler(Action<T, TCommand, IServiceProvider> func, IServiceProvider serviceProvider)
+        {
+            _func = func;
+            _serviceProvider = serviceProvider;
+        }
+
+        public async Task<MediatR.Unit> Handle(TCommand cmd, CancellationToken cancellationToken)
+        {
+            var repository = _serviceProvider.GetRequiredService<IRepository<T>>();
+            var keyValueFactory = _serviceProvider.GetRequiredService<IKeyValueFactory<TCommand>>();
+            var entity = await repository.FindAsync(keyValueFactory.Key(cmd));
+
+            _func(entity, cmd, _serviceProvider);
+
+            return Unit.Value; 
+        }
+    }
 }
