@@ -3,7 +3,7 @@ using FluentValidation;
 
 namespace CsMediatR.App;
 
-public record EditPersonCommand(string Description, int Id):IEntityCommand<Person,Person>
+public record EditPersonCommand(string Description, int Id):ICommand<Person>
 {
 }
 public class EditPersonCommandValidator: AbstractValidator<EditPersonCommand>

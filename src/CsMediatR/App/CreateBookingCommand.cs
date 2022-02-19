@@ -2,4 +2,4 @@ using CsMediatR.Infrastructure;
 
 namespace CsMediatR.App;
 
-public record CreateBookingCommand(string Description) : IEntityCommand<Booking,Booking>;
+public record CreateBookingCommand(string Description) : ICommand<Booking>;
