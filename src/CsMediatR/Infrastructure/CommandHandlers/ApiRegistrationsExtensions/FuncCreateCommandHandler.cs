@@ -5,22 +5,22 @@ namespace CsMediatR.Infrastructure.CommandHandlers;
 
 public static partial class ApiRegistrationsExtensions
 {
-    class FuncCreateCommandHandler<T, TCommand, TRet> : IRequestHandler<TCommand, TRet>
-        where TCommand : ICommand<TRet> where T : IEntity
+    class FuncCreateCommandHandler<TEntity, TCommand, TReturnValue> : IRequestHandler<TCommand, TReturnValue>
+        where TCommand : ICommand<TReturnValue> where TEntity : IEntity
     {
-        private readonly Func<TCommand, IServiceProvider, (T, TRet)> _func;
+        private readonly Func<TCommand, IServiceProvider, (TEntity, TReturnValue)> _func;
         private readonly IServiceProvider _serviceProvider;
 
-        public FuncCreateCommandHandler(Func<TCommand, IServiceProvider, (T, TRet)> func,
+        public FuncCreateCommandHandler(Func<TCommand, IServiceProvider, (TEntity, TReturnValue)> func,
             IServiceProvider serviceProvider)
         {
             _func = func;
             _serviceProvider = serviceProvider;
         }
 
-        public async Task<TRet> Handle(TCommand cmd, CancellationToken cancellationToken)
+        public async Task<TReturnValue> Handle(TCommand cmd, CancellationToken cancellationToken)
         {
-            var repository = _serviceProvider.GetRequiredService<IRepository<T>>();
+            var repository = _serviceProvider.GetRequiredService<IRepository<TEntity>>();
             var (entity, ret) = _func(cmd, _serviceProvider);
             await repository.AddAsync(entity);
             return ret;
