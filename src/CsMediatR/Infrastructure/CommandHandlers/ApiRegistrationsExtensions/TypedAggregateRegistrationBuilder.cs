@@ -11,10 +11,10 @@ public static partial class ApiRegistrationsExtensions
 
         public TypedAggregateRegistrationBuilder(IServiceCollection services) => _services = services;
 
-        public TypedAggregateRegistrationBuilder<TEntity> UpdateCommandOnEntity<TCommand, TReturnvalue>(Func<TEntity, TCommand, IServiceProvider, TReturnvalue> func)
-            where TCommand : ICommand<TReturnvalue>
+        public TypedAggregateRegistrationBuilder<TEntity> UpdateCommandOnEntity<TCommand, TResponse>(Func<TEntity, TCommand, IServiceProvider, TResponse> func)
+            where TCommand : ICommand<TResponse>
         {
-            _services.AddScoped<IRequestHandler<TCommand, TReturnvalue>>(di => new FuncMutateCommandHandler<TEntity, TCommand, TReturnvalue>(func, di));
+            _services.AddScoped<IRequestHandler<TCommand, TResponse>>(di => new FuncMutateCommandHandler<TEntity, TCommand, TResponse>(func, di));
             return this;
         }
         public TypedAggregateRegistrationBuilder<TEntity> CreateCommandOnEntity<TCommand>(Func<TCommand, IServiceProvider, TEntity> func)
