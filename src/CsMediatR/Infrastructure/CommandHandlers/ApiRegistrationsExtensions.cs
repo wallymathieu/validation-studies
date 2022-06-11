@@ -66,28 +66,27 @@ public static partial class ApiRegistrationsExtensions
                 var returnType = method.ReturnType;
                 var commandType = parameters[0].ParameterType;
                 var regType = typeof(IRequestHandler<,>).MakeGenericType(commandType, returnType);
-                Func<IServiceProvider, object> lambda = FuncCreateOnlyServiceProvider(t, method, commandType);
-                services.AddScoped(regType, svc => lambda(svc));
+                Func<IServiceProvider, object> serviceFactory = CreateFuncCreateOnlyServiceProviderFactory(t, method, commandType);
+                services.AddScoped(regType, svc => serviceFactory(svc));
                 return true;
             }
             return false;
         }
 
-        /* 
-            services.AddScoped<IRequestHandler<TCommand>>(svc=>
-                new FuncCreateCommandHandler<T,TCommand>((entity, cmd, svc) =>
-                    `EntityType`.`MethodInfo`(cmd, svc), svc))
+        /* This method turns the methodinfo into the following lambda method that returns an instance of FuncCreateCommandHandler
+                new FuncCreateCommandHandler<TEntity,TCommand>((entity, cmd, svcProvider) =>
+                    `EntityType`.`MethodInfo`(cmd, svcProvider), outerSvcProvider)
         */
-        static Func<IServiceProvider, object> FuncCreateOnlyServiceProvider(Type t, MethodInfo methodInfo, Type commandType)
+        static Func<IServiceProvider, object> CreateFuncCreateOnlyServiceProviderFactory(Type t, MethodInfo methodInfo, Type commandType)
         {
             var implType = typeof(FuncCreateCommandHandler<,>).MakeGenericType(t, commandType);
             //<TCommand, IServiceProvider, T>
             var funcType = typeof(Func<,,>).MakeGenericType(commandType, typeof(IServiceProvider), t);
             var parameter_Svc = Expression.Parameter(typeof(IServiceProvider), "svc");
-            // (cmd, svc) => `EntityType`.`MethodInfo`(cmd, svc)
+            // (cmd, svcProvider) => `EntityType`.`MethodInfo`(cmd, svcProvider)
             Func<IServiceProvider, object> lambda = Expression.Lambda<Func<IServiceProvider, object>>(
                 Expression.New( // new
-                    implType.GetConstructors()[0], // FuncCreateCommandHandler<T,TCommand>
+                    implType.GetConstructors()[0], // FuncCreateCommandHandler<TEntity,TCommand>
                     Expression.Constant(Delegate.CreateDelegate(funcType, methodInfo)), //
                     parameter_Svc
                 ),
@@ -105,18 +104,17 @@ public static partial class ApiRegistrationsExtensions
                 var serviceParameters = restParameters.Select(p=>p.ParameterType).ToArray();
                 var returnType = method.ReturnType;
                 var regType = typeof(IRequestHandler<,>).MakeGenericType(commandType, returnType);
-                Func<IServiceProvider, object> lambda = FuncCreateService(t, method, commandType, serviceParameters);
-                services.AddScoped(regType, svc => lambda(svc));
+                Func<IServiceProvider, object> serviceFactory = CreateFuncCreateServiceFactory(t, method, commandType, serviceParameters);
+                services.AddScoped(regType, svc => serviceFactory(svc));
                 return true;
             }
             return false;
         }
-        /* 
-            services.AddScoped<IRequestHandler<TCommand>>(svc=>
-                new FuncCreateCommandHandler<T,TCommand>((entity, cmd, svc) =>
-                    `EntityType`.`MethodInfo`(cmd, svc.GetRequiredService<TService>() ..), svc))
+        /* This method turns the methodinfo into the following lambda method that returns an instance of FuncCreateCommandHandler
+                new FuncCreateCommandHandler<TEntity,TCommand>((entity, cmd, svcProvider) =>
+                    `EntityType`.`MethodInfo`(cmd, svcProvider.GetRequiredService<TService>() ..), outerSvcProvider)
         */
-        static Func<IServiceProvider, object> FuncCreateService(Type t, MethodInfo methodInfo, Type commandType,Type[] serviceParameters)
+        static Func<IServiceProvider, object> CreateFuncCreateServiceFactory(Type t, MethodInfo methodInfo, Type commandType,Type[] serviceParameters)
         {
             var implType = typeof(FuncCreateCommandHandler<,>).MakeGenericType(t, commandType);
             //<TCommand, IServiceProvider, T>
@@ -132,11 +130,11 @@ public static partial class ApiRegistrationsExtensions
                 let getRequiredService = m.MakeGenericMethod(p)
                 select (Expression)Expression.Call(getRequiredService, parameter_Svc)
             );
-            // (cmd, svc) => `EntityType`.`MethodInfo`(cmd, svc.GetRequiredService<TService>() ...)
+            // (cmd, svc) => `EntityType`.`MethodInfo`(cmd, svcProvider.GetRequiredService<TService>() ...)
             Func<IServiceProvider, object> lambda = Expression.Lambda<Func<IServiceProvider, object>>(
                 Expression.New( // new
                     implType.GetConstructors()[0], // FuncCreateCommandHandler<T,TCommand>
-                    Expression.Lambda( // (cmd, svc) =>
+                    Expression.Lambda( // (cmd, svcProvider) =>
                         Expression.Call(methodInfo, new Expression[]{ parameter_Cmd }.Union( parameters).ToArray()), 
                         parameter_Cmd, parameter_Svc),
                     parameter_Svc
@@ -170,20 +168,19 @@ public static partial class ApiRegistrationsExtensions
                 var serviceParameters = restParameters.Select(p=>p.ParameterType).ToArray();
                 var returnType = method.ReturnType == typeof(void) ? typeof(MediatR.Unit) : method.ReturnType ;
                 var handlerTCommand = typeof(IRequestHandler<,>).MakeGenericType(commandType, returnType);
-                Func<IServiceProvider, object> lambda = FuncMutateServices(t, method, commandType, serviceParameters, returnType);
-                services.AddScoped(handlerTCommand, svc => lambda(svc));
+                Func<IServiceProvider, object> serviceFactory = CreateFuncMutateServicesFactory(t, method, commandType, serviceParameters, returnType);
+                services.AddScoped(handlerTCommand, svc => serviceFactory(svc));
                 return true;
             }
             return false ;
         }
-        /*
-            services.AddScoped<IRequestHandler<TCommand>>(svc=>
-                new FuncMutateCommandHandler<T,TCommand>((entity, cmd, svc) => entity.`MethodInfo`(cmd, 
-                    svc.GetRequiredService<IService1>(),
-                    svc.GetRequiredService<IService2>()
-                    ), svc))
+        /* This method turns the methodinfo into the following lambda method that returns an instance of FuncMutateCommandHandler
+                new FuncMutateCommandHandler<TEntity,TCommand, TReturntype>((entity, cmd, svcProvider) => entity.`MethodInfo`(cmd, 
+                    svcProvider.GetRequiredService<IService1>(),
+                    svcProvider.GetRequiredService<IService2>()
+                    ), outersvcProvider)
         */
-        static Func<IServiceProvider, object> FuncMutateServices(Type t, MethodInfo methodInfo, Type commandType, Type[] serviceParameters, Type returnType)
+        static Func<IServiceProvider, object> CreateFuncMutateServicesFactory(Type t, MethodInfo methodInfo, Type commandType, Type[] serviceParameters, Type returnType)
         {
             var funcMutateCommandHandlerTT = returnType == typeof(MediatR.Unit)
                 ? typeof(FuncMutateCommandHandler<,>).MakeGenericType(t, commandType)
@@ -201,11 +198,11 @@ public static partial class ApiRegistrationsExtensions
                 let getRequiredService = m.MakeGenericMethod(p)
                 select (Expression)Expression.Call(getRequiredService, parameter_Svc)
             );
-            // (entity, cmd, svc) => entity.`MethodInfo`(cmd, svc)
+            // (entity, cmd, svcProvider) => entity.`MethodInfo`(cmd, svcProvider)
             Func<IServiceProvider, object> lambda = Expression.Lambda<Func<IServiceProvider, object>>(
                     Expression.New( // new  
-                        funcMutateCommandHandlerTT.GetConstructors()[0], // FuncMutateCommandHandler<T,TCommand,TRet>
-                    Expression.Lambda( // (entity, cmd, svc) =>
+                        funcMutateCommandHandlerTT.GetConstructors()[0], // FuncMutateCommandHandler<TEntity,TCommand,TReturntype>
+                    Expression.Lambda( // (entity, cmd, svcProvider) =>
                         Expression.Call(parameter_Entity, methodInfo, new Expression[]{ parameter_Cmd }.Union( parameters).ToArray()), // entity.`MethodInfo`(cmd, svc.GetRequiredService<T>() ... ) , i.e. entity.HandleTheCommand(cmd,svc)
                         parameter_Entity, parameter_Cmd, parameter_Svc),
                     parameter_Svc
@@ -223,19 +220,18 @@ public static partial class ApiRegistrationsExtensions
                 var commandType = parameters[0].ParameterType;
                 var returnType = method.ReturnType == typeof(void) ? typeof(MediatR.Unit) : method.ReturnType ;
                 var handlerTCommand = typeof(IRequestHandler<,>).MakeGenericType(commandType, returnType);
-                Func<IServiceProvider, object> lambda = FuncMutateOnlyServiceProvider(t, method, commandType, returnType);
-                services.AddScoped(handlerTCommand, svc => lambda(svc));
+                Func<IServiceProvider, object> serviceFactory = CreateFuncMutateOnlyServiceProviderFactory(t, method, commandType, returnType);
+                services.AddScoped(handlerTCommand, svc => serviceFactory(svc));
                 return true;
             }
             return false;
         }
 
-        /*
-             services.AddScoped<IRequestHandler<TCommand>>(svc=>
-                new FuncMutateCommandHandler<T,TCommand>((entity, cmd, svc) => 
-                    entity.`MethodInfo`(cmd, svc), svc))
+        /* This method turns the methodinfo into the following lambda method that returns an instance of FuncMutateCommandHandler
+                new FuncMutateCommandHandler<TEntity,TCommand,TReturntype>((entity, cmd, svcProvider) => 
+                    entity.`MethodInfo`(cmd, svcProvider), outerSvdProvider)
         */
-        static Func<IServiceProvider, object> FuncMutateOnlyServiceProvider(Type t, MethodInfo methodInfo, Type commandType, Type returnType)
+        static Func<IServiceProvider, object> CreateFuncMutateOnlyServiceProviderFactory(Type t, MethodInfo methodInfo, Type commandType, Type returnType)
         {
             var funcMutateCommandHandlerTT = returnType == typeof(MediatR.Unit)
                 ? typeof(FuncMutateCommandHandler<,>).MakeGenericType(t, commandType)
@@ -243,12 +239,12 @@ public static partial class ApiRegistrationsExtensions
             var parameter_Entity = Expression.Parameter(t, "entity");
             var parameter_Cmd = Expression.Parameter(commandType, "cmd");
             var parameter_Svc = Expression.Parameter(typeof(IServiceProvider), "svc");
-            // (entity, cmd, svc) => entity.`MethodInfo`(cmd, svc)
+            // (entity, cmd, svcProvider) => entity.`MethodInfo`(cmd, svcProvider)
             Func<IServiceProvider, object> lambda = Expression.Lambda<Func<IServiceProvider, object>>(
                     Expression.New( // new  
-                        funcMutateCommandHandlerTT.GetConstructors()[0], // FuncMutateCommandHandler<T,TCommand,TRet>
-                    Expression.Lambda( // (entity, cmd, svc) =>
-                        Expression.Call(parameter_Entity, methodInfo, parameter_Cmd, parameter_Svc), // entity.`MethodInfo`(cmd, svc) , i.e. entity.HandleTheCommand(cmd,svc)
+                        funcMutateCommandHandlerTT.GetConstructors()[0], // FuncMutateCommandHandler<TEntity,TCommand,TReturntype>
+                    Expression.Lambda( // (entity, cmd, svcProvider) =>
+                        Expression.Call(parameter_Entity, methodInfo, parameter_Cmd, parameter_Svc), // entity.`MethodInfo`(cmd, svcProvider) , i.e. entity.HandleTheCommand(cmd,svcProvider)
                         parameter_Entity, parameter_Cmd, parameter_Svc),
                     parameter_Svc
                 ),
