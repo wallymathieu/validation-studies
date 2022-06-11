@@ -22,7 +22,7 @@ public static partial class ApiRegistrationsExtensions
         {
             var repository = _serviceProvider.GetRequiredService<IRepository<TEntity>>();
             var keyValueFactory = _serviceProvider.GetRequiredService<IKeyValueFactory<TCommand>>();
-            var validator= _serviceProvider.GetRequiredService<IValidator<T>>();
+            var validator= _serviceProvider.GetRequiredService<IValidator<TEntity>>();
             var entity = await repository.FindAsync(keyValueFactory.Key(cmd));
 
             var r = _func(entity, cmd, _serviceProvider);
