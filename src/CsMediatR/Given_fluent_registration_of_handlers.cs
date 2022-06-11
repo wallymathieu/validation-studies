@@ -35,7 +35,7 @@ public class Given_fluent_registration_of_handlers
     public void Can_find_create() => Assert.NotNull(_serviceProvider.GetRequiredService<IRequestHandler<CreatePersonCommand, Person>>());
 
     [Fact]
-    public async Task Can_execute_create() => await _mediator.Send(new CreatePersonCommand("Description"),default);
+    public async Task Can_execute_create() => await _mediator.Send(new CreatePersonCommand(Name: "Bob", Age: 25, Email: "bob@gmail.com"),default);
 
     [Fact]
     public void Can_find_update_handler() => Assert.NotNull( _serviceProvider.GetRequiredService<IRequestHandler<EditPersonCommand,Person>>());
