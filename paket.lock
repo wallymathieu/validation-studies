@@ -1,4 +1,4 @@
-GENERATE-LOAD-SCRIPTS: OFF
+GENERATE-LOAD-SCRIPTS: ON
 RESTRICTION: || (== net7.0) (== netstandard2.0)
 NUGET
   remote: https://api.nuget.org/v3/index.json
@@ -23,8 +23,8 @@ NUGET
     MediatR.Extensions.Microsoft.DependencyInjection (11.0)
       MediatR (>= 11.0) - restriction: || (== net7.0) (&& (== netstandard2.0) (>= netstandard2.1))
       Microsoft.Extensions.DependencyInjection.Abstractions (>= 6.0) - restriction: || (== net7.0) (&& (== netstandard2.0) (>= netstandard2.1))
-    Microsoft.Bcl.AsyncInterfaces (6.0) - restriction: || (&& (== net7.0) (>= net461)) (&& (== net7.0) (< netstandard2.1)) (== netstandard2.0)
-      System.Threading.Tasks.Extensions (>= 4.5.4) - restriction: || (&& (== net7.0) (>= net461)) (&& (== net7.0) (< netstandard2.1)) (== netstandard2.0)
+    Microsoft.Bcl.AsyncInterfaces (7.0) - restriction: || (&& (== net7.0) (>= net461)) (&& (== net7.0) (< netstandard2.1)) (== netstandard2.0)
+      System.Threading.Tasks.Extensions (>= 4.5.4) - restriction: || (&& (== net7.0) (>= net462)) (&& (== net7.0) (< netstandard2.1)) (== netstandard2.0)
     Microsoft.CodeCoverage (17.7.2) - restriction: || (== net7.0) (&& (== netstandard2.0) (>= net462)) (&& (== netstandard2.0) (>= netcoreapp3.1))
     Microsoft.Extensions.DependencyInjection.Abstractions (6.0)
       Microsoft.Bcl.AsyncInterfaces (>= 6.0) - restriction: || (&& (== net7.0) (>= net461)) (&& (== net7.0) (< netstandard2.1)) (== netstandard2.0)
@@ -41,12 +41,11 @@ NUGET
     Newtonsoft.Json (13.0.3) - restriction: || (== net7.0) (&& (== netstandard2.0) (>= netcoreapp3.1))
     NuGet.Frameworks (6.7) - restriction: || (== net7.0) (&& (== netstandard2.0) (>= netcoreapp3.1))
     OneOf (3.0.263)
-    System.Collections.Immutable (6.0) - restriction: || (== net7.0) (&& (== netstandard2.0) (>= netcoreapp3.1))
-      System.Runtime.CompilerServices.Unsafe (>= 6.0)
+    System.Collections.Immutable (7.0) - restriction: || (== net7.0) (&& (== netstandard2.0) (>= netcoreapp3.1))
     System.ComponentModel.Annotations (5.0)
-    System.Reflection.Metadata (6.0) - restriction: || (== net7.0) (&& (== netstandard2.0) (>= netcoreapp3.1))
-      System.Collections.Immutable (>= 6.0)
-    System.Runtime.CompilerServices.Unsafe (6.0)
+    System.Reflection.Metadata (7.0.2) - restriction: || (== net7.0) (&& (== netstandard2.0) (>= netcoreapp3.1))
+      System.Collections.Immutable (>= 7.0)
+    System.Runtime.CompilerServices.Unsafe (6.0) - restriction: || (&& (== net7.0) (>= net461)) (&& (== net7.0) (< netcoreapp2.1) (< netstandard2.1)) (&& (== net7.0) (< netstandard1.0)) (&& (== net7.0) (< netstandard2.0)) (&& (== net7.0) (>= wp8)) (== netstandard2.0)
     System.Threading.Tasks.Extensions (4.5.4) - restriction: || (&& (== net7.0) (>= net461)) (&& (== net7.0) (< netstandard2.1)) (== netstandard2.0)
       System.Runtime.CompilerServices.Unsafe (>= 4.5.3) - restriction: || (&& (== net7.0) (>= net461)) (&& (== net7.0) (< netcoreapp2.1)) (&& (== net7.0) (< netstandard1.0)) (&& (== net7.0) (< netstandard2.0)) (&& (== net7.0) (>= wp8)) (== netstandard2.0)
     xunit (2.4)
@@ -54,7 +53,7 @@ NUGET
       xunit.assert (2.4)
       xunit.core (2.4)
     xunit.abstractions (2.0.3)
-    xunit.analyzers (0.10)
+    xunit.analyzers (1.4)
     xunit.assert (2.4)
     xunit.core (2.4)
       xunit.extensibility.core (2.4)
