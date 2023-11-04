@@ -1,3 +1,4 @@
+using System.Reflection;
 using CsMediatR.Infrastructure;
 using FluentValidation;
 using MediatR;
@@ -27,7 +28,7 @@ public class Startup
     public void ConfigureServices(IServiceCollection services)
     {
         var applicationAssembly = this.GetType().Assembly;
-        services.AddMediatR(applicationAssembly);
+        services.AddMediatR(cfg=>cfg.RegisterServicesFromAssemblies(applicationAssembly));
         services.AddTransient<IAService,AService>();
         services.AddTransient<IRepository<Person>, InMemoryRepository<Person>>();
         services.AddTransient<IRepository<Booking>, InMemoryRepository<Booking>>();

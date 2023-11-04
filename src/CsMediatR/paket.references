@@ -4,6 +4,8 @@ xunit
 xunit.runner.visualstudio
 Microsoft.Extensions.DependencyInjection.Abstractions
 MediatR.Extensions.Microsoft.DependencyInjection
-FluentValidation.AspNetCore
 FluentValidation.DependencyInjectionExtensions
 System.ComponentModel.Annotations
+Microsoft.Extensions.Configuration
+Microsoft.Extensions.DependencyInjection
+Microsoft.Extensions.Options.ConfigurationExtensions
