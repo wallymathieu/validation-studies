@@ -1,17 +1,18 @@
 source https://api.nuget.org/v3/index.json
 frameworks: netstandard2.0, net7
-generate_load_scripts: true
-nuget FluentValidation.AspNetCore
 nuget FluentValidation.DependencyInjectionExtensions
 nuget FSharp.Core
 nuget FluentValidation 
 nuget FSharpPlus 1.2.0
-nuget Microsoft.Extensions.DependencyInjection.Abstractions
 nuget System.ComponentModel.Annotations 
 nuget AccidentalFish.FSharp.Validation
-nuget Microsoft.NET.Test.Sdk
 nuget xunit 2.4.0
 nuget xunit.runner.visualstudio 2.4.0
 nuget coverlet.collector 1.0.1
 nuget OneOf
 nuget MediatR.Extensions.Microsoft.DependencyInjection
+nuget Microsoft.NET.Test.Sdk
+nuget Microsoft.Extensions.Configuration
+nuget Microsoft.Extensions.Options.ConfigurationExtensions
+nuget Microsoft.Extensions.DependencyInjection.Abstractions
+nuget Microsoft.Extensions.DependencyInjection 
